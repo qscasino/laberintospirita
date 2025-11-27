@@ -1,1 +1,903 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPIRITA — Laberinto del Tesoro</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600&family=Teko:wght@500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    /* SPIRITA color palette with dark purple/orange theme */
+    :root {
+      --spirita-dark: #17101F;
+      --spirita-orange: #F5941E;
+      --spirita-cream: #FDFCD1;
+      --spirita-black: #000;
+      --spirita-gray: #9D9D9D;
+      
+      --white: #FFFFFF;
+      --ff-body: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      --ff-display: 'Cinzel', serif;
+      --ff-ui: 'Teko', sans-serif;
+    }
+
+    body {
+      font-family: var(--ff-body);
+      /* SPIRITA dark purple gradient background */
+      background:
+        radial-gradient(1200px 700px at 50% -10%, rgba(245,148,30,.08), transparent 60%),
+        radial-gradient(900px 600px at 80% 100%, rgba(245,148,30,.05), transparent 60%),
+        linear-gradient(135deg, #0d0712 0%, var(--spirita-dark) 35%, #1f1527 100%);
+      min-height: 100vh;
+      color: var(--spirita-cream);
+      overflow-x: hidden;
+      position: relative;
+      letter-spacing: .1px;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Preloader */
+    #preloader {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0d0712 0%, var(--spirita-dark) 100%);
+      transition: opacity .5s ease, visibility .5s ease;
+    }
+
+    #preloader.hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    #logo {
+      width: 260px;
+      max-width: 80vw;
+      height: auto;
+      animation: logoFloat 2.5s ease-in-out infinite;
+      /* SPIRITA orange glow */
+      filter: drop-shadow(0 10px 30px rgba(245,148,30,.55));
+    }
+
+    @keyframes logoFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-14px); }
+    }
+
+    .loading-progress {
+      margin-top: 30px;
+      width: 320px;
+      max-width: 80vw;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 4px;
+      /* SPIRITA orange progress bar */
+      background: rgba(245,148,30,.25);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,.35);
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      /* SPIRITA orange gradient */
+      background: linear-gradient(90deg, #c47419, var(--spirita-orange), #ffb347);
+      background-size: 200% 100%;
+      width: 0%;
+      border-radius: 10px;
+      transition: width .1s linear;
+      animation: shimmer 1.5s infinite;
+      box-shadow: 0 0 10px rgba(245,148,30,.65);
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .progress-text {
+      margin-top: 10px;
+      font-size: .85rem;
+      color: var(--spirita-cream);
+      text-align: center;
+      letter-spacing: .5px;
+    }
+
+    /* Game Container */
+    .container {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .header-section {
+      text-align: center;
+      margin-bottom: 40px;
+      animation: fadeInDown 1s ease;
+      max-width: 960px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .event-badge {
+      display: inline-block;
+      padding: 8px 18px;
+      border-radius: 999px;
+      /* SPIRITA orange gradient badge */
+      background: linear-gradient(135deg, var(--spirita-orange), #ffb347);
+      font-family: var(--ff-ui);
+      font-size: clamp(.8rem, 2.2vw, .95rem);
+      line-height: 1;
+      letter-spacing: .4px;
+      color: var(--spirita-dark);
+      margin-bottom: 18px;
+      box-shadow: 0 4px 20px rgba(245,148,30,.45);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    h1 {
+      font-family: var(--ff-display);
+      font-weight: 700;
+      line-height: 1.12;
+      font-size: clamp(2.2rem, 5vw, 3.6rem);
+      margin-bottom: 14px;
+      letter-spacing: .2px;
+      /* SPIRITA cream to orange gradient text */
+      background: linear-gradient(135deg, var(--spirita-cream), var(--spirita-orange));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      max-width: 640px;
+      margin: 0 auto;
+      color: var(--spirita-cream);
+      font-size: clamp(1rem, 2.2vw, 1.1rem);
+    }
+
+    /* Canvas Container */
+    .game-wrapper {
+      animation: fadeInUp 1s ease .25s both;
+      margin-top: 12px;
+      width: 100%;
+      display: grid;
+      place-items: center;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .canvas-container {
+      position: relative;
+      display: inline-block;
+      /* SPIRITA dark purple background */
+      background: linear-gradient(135deg, #1f1527 0%, var(--spirita-dark) 100%);
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow:
+        0 22px 62px rgba(245,148,30,.35),
+        0 0 0 1px rgba(245,148,30,.30),
+        inset 0 1px 0 rgba(255,255,255,.08);
+      max-width: 95vw;
+    }
+
+    #mazeCanvas {
+      display: block;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.5);
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* Mobile Controls */
+    .mobile-controls {
+      display: none;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      max-width: 300px;
+      margin: 20px auto;
+    }
+
+    .control-btn {
+      /* SPIRITA orange gradient buttons */
+      background: linear-gradient(145deg, var(--spirita-orange), #c47419);
+      border: 3px solid var(--spirita-cream);
+      border-radius: 15px;
+      padding: 20px;
+      font-size: 1.5rem;
+      color: var(--spirita-dark);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(245,148,30,.5);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      font-weight: 700;
+    }
+
+    .control-btn:active {
+      transform: scale(0.95);
+      box-shadow: 0 2px 10px rgba(245,148,30,.7);
+    }
+
+    .control-btn.up {
+      grid-column: 2;
+    }
+
+    .control-btn.left {
+      grid-column: 1;
+    }
+
+    .control-btn.down {
+      grid-column: 2;
+    }
+
+    .control-btn.right {
+      grid-column: 3;
+    }
+
+    /* Instructions */
+    .instructions {
+      margin-top: 25px;
+      padding: 20px;
+      background: rgba(245,148,30,.12);
+      border-radius: 15px;
+      border: 2px solid rgba(245,148,30,.30);
+      box-shadow: 0 5px 20px rgba(0,0,0,.3);
+      max-width: 600px;
+    }
+
+    .instructions h3 {
+      color: var(--spirita-orange);
+      font-size: 1.3rem;
+      margin-bottom: 10px;
+      font-weight: 600;
+      font-family: var(--ff-display);
+    }
+
+    .instructions p {
+      color: var(--spirita-cream);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+
+    .keys {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+
+    .key {
+      background: linear-gradient(145deg, var(--spirita-orange), #c47419);
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      box-shadow: 0 4px 15px rgba(245,148,30,.5);
+      border: 2px solid var(--spirita-cream);
+      color: var(--spirita-dark);
+    }
+
+    /* Modal */
+    .result-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.85);
+      backdrop-filter: blur(10px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      animation: fadeIn .3s ease;
+    }
+
+    .result-modal.show {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-content {
+      /* SPIRITA dark purple background */
+      background: linear-gradient(135deg, #0d0712 0%, var(--spirita-dark) 100%);
+      border-radius: 22px;
+      padding: clamp(28px, 6vw, 46px);
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+      position: relative;
+      border: 1.5px solid var(--spirita-orange);
+      box-shadow:
+        0 30px 80px rgba(0,0,0,.55),
+        0 0 0 1px rgba(245,148,30,.30),
+        inset 0 1px 0 rgba(255,255,255,.05);
+      animation: modalIn .5s cubic-bezier(.68,-.55,.265,1.55);
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(.85) translateY(40px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .close {
+      position: absolute;
+      right: 20px;
+      top: 20px;
+      color: var(--spirita-orange);
+      font-size: 35px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(245,148,30,.2);
+      border: 2px solid rgba(245,148,30,.4);
+    }
+
+    .close:hover {
+      background: rgba(245,148,30,.3);
+      transform: rotate(90deg);
+      box-shadow: 0 0 20px rgba(245,148,30,.6);
+    }
+
+    .trophy-icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      animation: bounce 1s ease infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .modal-title {
+      font-family: var(--ff-display);
+      font-weight: 700;
+      font-size: clamp(1.7rem, 5vw, 2.4rem);
+      /* SPIRITA orange gradient text */
+      background: linear-gradient(135deg, var(--spirita-cream), var(--spirita-orange));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 14px;
+    }
+
+    .prize-display {
+      /* SPIRITA orange gradient background */
+      background: linear-gradient(135deg, var(--spirita-orange), #c47419);
+      border-radius: 14px;
+      padding: clamp(22px, 5vw, 34px);
+      margin: 18px 0;
+      box-shadow:
+        0 10px 40px rgba(245,148,30,.45),
+        inset 0 1px 0 rgba(255,255,255,.1);
+    }
+
+    .prize-text {
+      font-family: var(--ff-ui);
+      letter-spacing: .4px;
+      font-size: clamp(1.5rem, 4.5vw, 2rem);
+      font-weight: 600;
+      color: var(--spirita-dark);
+    }
+
+    .prize-description {
+      font-size: .95rem;
+      color: var(--spirita-cream);
+      margin-top: 10px;
+    }
+
+    .modal-button {
+      /* SPIRITA orange gradient button */
+      background: linear-gradient(135deg, var(--spirita-orange), #ffb347);
+      color: var(--spirita-dark);
+      border: none;
+      padding: 14px 40px;
+      font-size: 1rem;
+      font-weight: 700;
+      border-radius: 999px;
+      cursor: pointer;
+      margin-top: 18px;
+      transition: transform .2s ease, box-shadow .2s ease;
+      letter-spacing: .2px;
+      box-shadow: 0 10px 30px rgba(245,148,30,.45);
+      font-family: var(--ff-body);
+    }
+
+    .modal-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 38px rgba(245,148,30,.55);
+    }
+
+    .modal-button:active {
+      transform: translateY(0);
+    }
+
+    /* Success Message */
+    .success-message {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #0d0712 0%, var(--spirita-dark) 100%);
+      padding: 40px 60px;
+      border: 3px solid var(--spirita-orange);
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: 0 0 50px rgba(245,148,30,.9);
+      z-index: 10000;
+      animation: successPulse 0.5s ease-out;
+    }
+
+    @keyframes successPulse {
+      0% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+      }
+    }
+
+    .success-message h2 {
+      color: var(--spirita-orange);
+      font-size: 2.2rem;
+      margin-bottom: 15px;
+      text-shadow: 0 0 20px rgba(245,148,30,.7);
+      font-weight: 800;
+      font-family: var(--ff-display);
+    }
+
+    .success-message p {
+      color: var(--spirita-cream);
+      font-size: 1.4rem;
+      margin: 10px 0;
+    }
+
+    .success-highlight {
+      color: var(--spirita-orange);
+      font-size: 2rem;
+      font-weight: 800;
+      text-shadow: 0 0 20px rgba(245,148,30,.9);
+    }
+
+    /* Confetti */
+    #confetti {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 2147483647;
+    }
+
+    .confetti-piece {
+      position: absolute;
+      top: -10vh;
+      left: 0;
+      width: 10px;
+      height: 10px;
+      /* SPIRITA orange confetti */
+      background: var(--spirita-orange);
+      border-radius: 2px;
+      will-change: top, left, transform, opacity;
+      animation:
+        fall var(--t, 3s) linear var(--delay, 0s) forwards,
+        sway var(--tsway, 2s) ease-in-out var(--delay, 0s) infinite alternate,
+        spin var(--tspin, 1.6s) linear var(--delay, 0s) infinite;
+      opacity: .95;
+    }
+
+    @keyframes fall {
+      to { top: 110vh; opacity: 0; }
+    }
+
+    @keyframes sway {
+      from { left: calc(var(--x, 50) * 1vw - var(--amp, 3vw)); }
+      to { left: calc(var(--x, 50) * 1vw + var(--amp, 3vw)); }
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(720deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #logo, .header-section, .game-wrapper, .trophy-icon, .modal-content {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .header-section {
+        margin-bottom: 30px;
+      }
+
+      .mobile-controls {
+        display: grid;
+      }
+
+      .keys {
+        display: none;
+      }
+
+      .instructions {
+        padding: 15px;
+      }
+
+      .modal-content {
+        padding: 30px 20px;
+        margin: 18px;
+      }
+
+      .success-message {
+        padding: 30px 40px;
+        width: 90%;
+      }
+
+      .success-message h2 {
+        font-size: 1.8rem;
+      }
+
+      .success-message p {
+        font-size: 1.2rem;
+      }
+
+      .success-highlight {
+        font-size: 1.6rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 14px;
+      }
+
+      .canvas-container {
+        border-radius: 20px;
+        padding: 15px;
+      }
+
+      .modal-content {
+        border-radius: 18px;
+        padding: 26px 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Preloader -->
+  <div id="preloader" aria-hidden="true">
+    <!-- SPIRITA logo -->
+    <img src="assets/spirita-logo.png" id="logo" alt="SPIRITA" onerror="this.style.display='none'">
+    <div class="loading-progress">
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <div class="progress-text" id="progressText">0%</div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="container">
+    <div class="header-section" role="banner">
+      <div class="event-badge">Premio Exclusivo</div>
+      <h1>Laberinto del Tesoro</h1>
+      <p class="subtitle">Encuentra tu camino hacia el premio del 150%. Solo tienes una oportunidad.</p>
+    </div>
+
+    <div class="game-wrapper">
+      <div class="canvas-container">
+        <canvas id="mazeCanvas" width="450" height="450"></canvas>
+      </div>
+
+      <div class="mobile-controls">
+        <button class="control-btn up" id="btnUp">↑</button>
+        <button class="control-btn left" id="btnLeft">←</button>
+        <button class="control-btn down" id="btnDown">↓</button>
+        <button class="control-btn right" id="btnRight">→</button>
+      </div>
+
+      <div class="instructions">
+        <h3>¿Cómo jugar?</h3>
+        <p>Usa las flechas del teclado o los botones para moverte</p>
+        <p>Encuentra el trofeo dorado para reclamar tu bono del 150%</p>
+        <p><strong>¡Solo tienes una oportunidad! El juego termina cuando reclames el premio.</strong></p>
+        <div class="keys">
+          <div class="key">↑ W</div>
+          <div class="key">← A</div>
+          <div class="key">↓ S</div>
+          <div class="key">→ D</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="result-modal" id="resultModal" aria-modal="true" role="dialog">
+    <div class="modal-content">
+      <span class="close" id="closeModal">&times;</span>
+      <div class="trophy-icon">🏆</div>
+      <h2 class="modal-title">¡Felicitaciones!</h2>
+      <div class="prize-display">
+        <div class="prize-text">BONO DEL 150%</div>
+      </div>
+      <!-- SPIRITA branding -->
+      <p class="prize-description">Tu premio ha sido acreditado. ¡A disfrutarlo en SPIRITA!</p>
+      <button class="modal-button" id="claimBtn">Aceptar</button>
+    </div>
+  </div>
+
+  <!-- Success Message -->
+  <div class="success-message" id="successMessage">
+    <h2>¡Felicitaciones!</h2>
+    <p>Conseguiste el</p>
+    <p class="success-highlight">150%</p>
+  </div>
+
+  <!-- Confetti Layer -->
+  <div id="confetti"></div>
+
+  <script>
+    /* SPIRITA specific storage key */
+    const STORAGE_KEY = 'laberintoSpiritaPlayed';
+
+    /* Preloader */
+    window.addEventListener('load', function() {
+      let p = 0;
+      const i = setInterval(() => {
+        p += Math.random() * 15 + 5;
+        if (p >= 100) {
+          p = 100;
+          clearInterval(i);
+          setTimeout(() => document.getElementById('preloader').classList.add('hidden'), 300);
+        }
+        document.getElementById('progressBar').style.width = p + '%';
+        document.getElementById('progressText').textContent = Math.floor(p) + '%';
+      }, 100);
+    });
+
+    const canvas = document.getElementById('mazeCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const CELL_SIZE = 30;
+    const MAZE_SIZE = 15;
+    /* SPIRITA maze colors: dark purple walls with orange borders */
+    const WALL_COLOR = '#17101F';
+    const WALL_BORDER = '#F5941E';
+    const PATH_COLOR = '#0d0712';
+    const PLAYER_COLOR = '#F5941E';
+    const PRIZE_COLOR = '#ffb347';
+
+    let player = { x: 1, y: 1 };
+    let prize = { x: 13, y: 7 }; // Updated position
+    let gameWon = false;
+
+    const maze = [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+      [1,0,1,1,1,0,1,0,1,1,1,1,1,0,1],
+      [1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
+      [1,0,1,0,1,1,1,1,1,1,1,0,1,0,1],
+      [1,0,0,0,1,0,0,0,0,0,0,0,1,0,1],
+      [1,1,1,1,1,0,1,1,1,1,1,1,1,0,1],
+      [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+      [1,0,1,1,1,1,1,0,1,1,1,1,1,1,1],
+      [1,0,1,0,0,0,0,0,0,0,1,0,0,0,1],
+      [1,0,1,0,1,1,1,1,1,0,1,0,1,0,1],
+      [1,0,0,0,1,0,0,0,0,0,0,0,1,0,1],
+      [1,1,1,0,1,0,1,1,1,1,1,1,1,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+
+    function drawMaze() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      for (let y = 0; y < MAZE_SIZE; y++) {
+        for (let x = 0; x < MAZE_SIZE; x++) {
+          if (maze[y][x] === 1) {
+            ctx.fillStyle = WALL_COLOR;
+            ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            ctx.strokeStyle = WALL_BORDER;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+          } else {
+            ctx.fillStyle = PATH_COLOR;
+            ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+          }
+        }
+      }
+
+      ctx.fillStyle = PLAYER_COLOR;
+      ctx.beginPath();
+      ctx.arc(
+        player.x * CELL_SIZE + CELL_SIZE / 2,
+        player.y * CELL_SIZE + CELL_SIZE / 2,
+        CELL_SIZE / 3,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+      ctx.strokeStyle = '#FDFCD1';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.font = '20px Arial';
+      ctx.fillText(
+        '🏆',
+        prize.x * CELL_SIZE + 5,
+        prize.y * CELL_SIZE + 22
+      );
+    }
+
+    function canMove(x, y) {
+      return x >= 0 && x < MAZE_SIZE && y >= 0 && y < MAZE_SIZE && maze[y][x] === 0;
+    }
+
+    function movePlayer(dx, dy) {
+      if (gameWon) return;
+      
+      const newX = player.x + dx;
+      const newY = player.y + dy;
+
+      if (canMove(newX, newY)) {
+        player.x = newX;
+        player.y = newY;
+        drawMaze();
+        checkWin();
+      }
+    }
+
+    function checkWin() {
+      if (player.x === prize.x && player.y === prize.y && !gameWon) {
+        gameWon = true;
+        showModal();
+      }
+    }
+
+    function showModal() {
+      createConfetti();
+      document.getElementById('resultModal').classList.add('show');
+    }
+
+    function hideModal() {
+      document.getElementById('resultModal').classList.remove('show');
+      
+      localStorage.setItem(STORAGE_KEY, 'true');
+      
+      const successMsg = document.getElementById('successMessage');
+      successMsg.style.display = 'block';
+      
+      setTimeout(() => {
+        successMsg.style.display = 'none';
+      }, 5000);
+    }
+
+    function createConfetti() {
+      const confettiContainer = document.getElementById('confetti');
+      confettiContainer.innerHTML = '';
+      
+      /* SPIRITA orange confetti colors */
+      const colors = ['#F5941E', '#ffb347', '#c47419', '#FDFCD1'];
+      
+      for (let i = 0; i < 100; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti-piece';
+        confetti.style.setProperty('--x', Math.random() * 100);
+        confetti.style.setProperty('--t', (Math.random() * 2 + 3) + 's');
+        confetti.style.setProperty('--delay', (Math.random() * 0.5) + 's');
+        confetti.style.setProperty('--amp', (Math.random() * 5 + 2) + 'vw');
+        confetti.style.setProperty('--tsway', (Math.random() * 1 + 1.5) + 's');
+        confetti.style.setProperty('--tspin', (Math.random() * 1 + 1) + 's');
+        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+        confettiContainer.appendChild(confetti);
+      }
+
+      setTimeout(() => {
+        confettiContainer.innerHTML = '';
+      }, 6000);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      switch(e.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+          e.preventDefault();
+          movePlayer(0, -1);
+          break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          e.preventDefault();
+          movePlayer(0, 1);
+          break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          e.preventDefault();
+          movePlayer(-1, 0);
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          e.preventDefault();
+          movePlayer(1, 0);
+          break;
+      }
+    });
+
+    document.getElementById('btnUp').addEventListener('click', () => movePlayer(0, -1));
+    document.getElementById('btnDown').addEventListener('click', () => movePlayer(0, 1));
+    document.getElementById('btnLeft').addEventListener('click', () => movePlayer(-1, 0));
+    document.getElementById('btnRight').addEventListener('click', () => movePlayer(1, 0));
+
+    document.getElementById('closeModal').addEventListener('click', hideModal);
+    document.getElementById('claimBtn').addEventListener('click', hideModal);
+
+    function startGame() {
+      if (localStorage.getItem(STORAGE_KEY) === 'true') {
+        showModal();
+      }
+      drawMaze();
+    }
+
+    window.addEventListener('load', () => {
+      setTimeout(startGame, 1000);
+    });
+  </script>
+</body>
+</html>
 
