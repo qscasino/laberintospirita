@@ -690,9 +690,13 @@
   <div id="confetti"></div>
 
   <script>
-    /* SPIRITA specific storage key */
-    const STORAGE_KEY = 'laberintoSpiritaPlayed';
-
+    /* Spirita storage key */
+    const STORAGE_KEY = 'laberintoSpiritaLastPlay';
+  
+    function getTodayKey() {
+      return new Date().toISOString().slice(0, 10);
+    }
+  
     /* Preloader */
     window.addEventListener('load', function() {
       let p = 0;
@@ -707,23 +711,24 @@
         document.getElementById('progressText').textContent = Math.floor(p) + '%';
       }, 100);
     });
-
+  
     const canvas = document.getElementById('mazeCanvas');
     const ctx = canvas.getContext('2d');
-
+  
     const CELL_SIZE = 30;
     const MAZE_SIZE = 15;
-    /* SPIRITA maze colors: dark purple walls with orange borders */
-    const WALL_COLOR = '#17101F';
-    const WALL_BORDER = '#F5941E';
-    const PATH_COLOR = '#0d0712';
+  
+    // 🎨 Colores Spirita
+    const WALL_COLOR   = '#17101F';
+    const WALL_BORDER  = '#F5941E';
+    const PATH_COLOR   = '#0d0712';
     const PLAYER_COLOR = '#F5941E';
-    const PRIZE_COLOR = '#ffb347';
-
+    const PRIZE_COLOR  = '#ffb347';
+  
     let player = { x: 1, y: 1 };
-    let prize = { x: 13, y: 7 }; // Updated position
+    let prize  = { x: 13, y: 7 };
     let gameWon = false;
-
+  
     const maze = [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
@@ -741,10 +746,8 @@
       [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     ];
-
+  
     function drawMaze() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
       for (let y = 0; y < MAZE_SIZE; y++) {
         for (let x = 0; x < MAZE_SIZE; x++) {
           if (maze[y][x] === 1) {
@@ -759,8 +762,12 @@
           }
         }
       }
-
+    }
+  
+    function drawPlayer() {
       ctx.fillStyle = PLAYER_COLOR;
+      ctx.shadowColor = 'rgba(245,148,30,0.8)';
+      ctx.shadowBlur = 15;
       ctx.beginPath();
       ctx.arc(
         player.x * CELL_SIZE + CELL_SIZE / 2,
@@ -770,86 +777,94 @@
         Math.PI * 2
       );
       ctx.fill();
-      ctx.strokeStyle = '#FDFCD1';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      ctx.font = '20px Arial';
-      ctx.fillText(
-        '🏆',
-        prize.x * CELL_SIZE + 5,
-        prize.y * CELL_SIZE + 22
-      );
+      ctx.shadowBlur = 0;
     }
-
-    function canMove(x, y) {
-      return x >= 0 && x < MAZE_SIZE && y >= 0 && y < MAZE_SIZE && maze[y][x] === 0;
+  
+    function drawPrize() {
+      const centerX = prize.x * CELL_SIZE + CELL_SIZE / 2;
+      const centerY = prize.y * CELL_SIZE + CELL_SIZE / 2;
+      
+      ctx.save();
+      ctx.shadowColor = 'rgba(245,148,30,0.9)';
+      ctx.shadowBlur = 20;
+      ctx.fillStyle = PRIZE_COLOR;
+      ctx.font = 'bold 20px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🏆', centerX, centerY);
+      ctx.restore();
     }
-
+  
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawMaze();
+      drawPrize();
+      drawPlayer();
+    }
+  
+    function markAsPlayed() {
+      const today = getTodayKey();
+      localStorage.setItem(STORAGE_KEY, today);
+      gameWon = true;
+    }
+  
     function movePlayer(dx, dy) {
       if (gameWon) return;
-      
+  
       const newX = player.x + dx;
       const newY = player.y + dy;
-
-      if (canMove(newX, newY)) {
+  
+      if (newX >= 0 && newX < MAZE_SIZE && newY >= 0 && newY < MAZE_SIZE && maze[newY][newX] === 0) {
         player.x = newX;
         player.y = newY;
-        drawMaze();
-        checkWin();
+  
+        if (player.x === prize.x && player.y === prize.y) {
+          markAsPlayed();
+          showWinModal();
+        }
+  
+        draw();
       }
     }
-
-    function checkWin() {
-      if (player.x === prize.x && player.y === prize.y && !gameWon) {
-        gameWon = true;
-        showModal();
-      }
-    }
-
-    function showModal() {
-      createConfetti();
+  
+    function showWinModal() {
+      lanzarConfetti();
       document.getElementById('resultModal').classList.add('show');
     }
-
-    function hideModal() {
-      document.getElementById('resultModal').classList.remove('show');
-      
-      localStorage.setItem(STORAGE_KEY, 'true');
-      
-      const successMsg = document.getElementById('successMessage');
-      successMsg.style.display = 'block';
-      
-      setTimeout(() => {
-        successMsg.style.display = 'none';
-      }, 5000);
-    }
-
-    function createConfetti() {
-      const confettiContainer = document.getElementById('confetti');
-      confettiContainer.innerHTML = '';
-      
-      /* SPIRITA orange confetti colors */
+  
+    function lanzarConfetti() {
+      const confettiLayer = document.getElementById('confetti');
+      confettiLayer.innerHTML = '';
       const colors = ['#F5941E', '#ffb347', '#c47419', '#FDFCD1'];
+      const total = 100;
       
-      for (let i = 0; i < 100; i++) {
-        const confetti = document.createElement('div');
-        confetti.className = 'confetti-piece';
-        confetti.style.setProperty('--x', Math.random() * 100);
-        confetti.style.setProperty('--t', (Math.random() * 2 + 3) + 's');
-        confetti.style.setProperty('--delay', (Math.random() * 0.5) + 's');
-        confetti.style.setProperty('--amp', (Math.random() * 5 + 2) + 'vw');
-        confetti.style.setProperty('--tsway', (Math.random() * 1 + 1.5) + 's');
-        confetti.style.setProperty('--tspin', (Math.random() * 1 + 1) + 's');
-        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-        confettiContainer.appendChild(confetti);
+      for (let i = 0; i < total; i++) {
+        const c = document.createElement('div');
+        c.className = 'confetti-piece';
+        const x = Math.random() * 100;
+        const amp = (Math.random() * 5 + 2) + 'vw';
+        const size = (Math.random() * 8 + 6);
+        const t = (Math.random() * 2 + 3) + 's';
+        const tsway = (Math.random() * 1 + 1.5) + 's';
+        const tspin = (Math.random() * 1 + 1) + 's';
+        const delay = (Math.random() * 0.5) + 's';
+  
+        c.style.setProperty('--x', x);
+        c.style.setProperty('--amp', amp);
+        c.style.setProperty('--t', t);
+        c.style.setProperty('--tsway', tsway);
+        c.style.setProperty('--tspin', tspin);
+        c.style.setProperty('--delay', delay);
+  
+        c.style.width = size + 'px';
+        c.style.height = size + 'px';
+        c.style.background = colors[Math.floor(Math.random() * colors.length)];
+  
+        confettiLayer.appendChild(c);
+        setTimeout(() => c.remove(), 6000);
       }
-
-      setTimeout(() => {
-        confettiContainer.innerHTML = '';
-      }, 6000);
     }
-
+  
     document.addEventListener('keydown', (e) => {
       switch(e.key) {
         case 'ArrowUp':
@@ -878,25 +893,55 @@
           break;
       }
     });
-
+  
     document.getElementById('btnUp').addEventListener('click', () => movePlayer(0, -1));
     document.getElementById('btnDown').addEventListener('click', () => movePlayer(0, 1));
     document.getElementById('btnLeft').addEventListener('click', () => movePlayer(-1, 0));
     document.getElementById('btnRight').addEventListener('click', () => movePlayer(1, 0));
-
-    document.getElementById('closeModal').addEventListener('click', hideModal);
-    document.getElementById('claimBtn').addEventListener('click', hideModal);
-
-    function startGame() {
-      if (localStorage.getItem(STORAGE_KEY) === 'true') {
-        showModal();
-      }
-      drawMaze();
-    }
-
-    window.addEventListener('load', () => {
-      setTimeout(startGame, 1000);
+  
+    document.getElementById('closeModal').addEventListener('click', () => {
+      document.getElementById('resultModal').classList.remove('show');
+      showSuccessMessage();
     });
+  
+    document.getElementById('claimBtn').addEventListener('click', () => {
+      document.getElementById('resultModal').classList.remove('show');
+      showSuccessMessage();
+    });
+  
+    function showSuccessMessage() {
+      markAsPlayed();
+      const successMsg = document.getElementById('successMessage');
+      successMsg.style.display = 'block';
+    }
+  
+    window.addEventListener('click', (e) => {
+      const modal = document.getElementById('resultModal');
+      if (e.target === modal) {
+        modal.classList.remove('show');
+        showSuccessMessage();
+      }
+    });
+  
+    function initGame() {
+      const lastPlay = localStorage.getItem(STORAGE_KEY);
+      const today = getTodayKey();
+      const alreadyPlayedToday = lastPlay === today;
+  
+      if (alreadyPlayedToday) {
+        gameWon = true;
+        player.x = prize.x;
+        player.y = prize.y;
+        draw();
+        setTimeout(showSuccessMessage, 200);
+      } else {
+        gameWon = false;
+        player = { x: 1, y: 1 };
+        draw();
+      }
+    }
+  
+    initGame();
   </script>
 </body>
 </html>
